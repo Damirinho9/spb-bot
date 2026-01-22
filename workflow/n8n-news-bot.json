@@ -1,0 +1,315 @@
+{
+  "name": "SPB Free Events News Bot",
+  "nodes": [
+    {
+      "parameters": {
+        "triggerTimes": {
+          "item": [
+            {
+              "mode": "everyDay",
+              "hour": 11,
+              "minute": 0
+            },
+            {
+              "mode": "everyDay",
+              "hour": 14,
+              "minute": 0
+            },
+            {
+              "mode": "everyDay",
+              "hour": 18,
+              "minute": 0
+            }
+          ]
+        }
+      },
+      "id": "cron-schedule",
+      "name": "Schedule",
+      "type": "n8n-nodes-base.cron",
+      "typeVersion": 1,
+      "position": [
+        200,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "path": "spb-free-events-now",
+        "responseMode": "lastNode",
+        "httpMethod": "POST"
+      },
+      "id": "webhook-now",
+      "name": "Post Now Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        200,
+        380
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "list",
+        "documentId": "={{$env.GOOGLE_SHEET_ID}}",
+        "sheetName": "sources",
+        "returnAll": true
+      },
+      "id": "sheets-sources",
+      "name": "Sources Sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [
+        450,
+        290
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "replace-me",
+          "name": "Google Sheets"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "batchSize": 1
+      },
+      "id": "split-sources",
+      "name": "Split Sources",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 1,
+      "position": [
+        640,
+        290
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{$json.url}}",
+        "options": {
+          "allowUnauthorizedCerts": false
+        }
+      },
+      "id": "rss-read",
+      "name": "Read RSS",
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1,
+      "position": [
+        860,
+        290
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "lookup",
+        "documentId": "={{$env.GOOGLE_SHEET_ID}}",
+        "sheetName": "log",
+        "lookupColumn": "source_id",
+        "lookupValue": "={{$json.guid || $json.link || $json.title}}"
+      },
+      "id": "sheets-lookup",
+      "name": "Check Duplicates",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [
+        1080,
+        290
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "replace-me",
+          "name": "Google Sheets"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{$items().length === 0}}"
+            }
+          ]
+        }
+      },
+      "id": "if-new",
+      "name": "If New",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        1280,
+        290
+      ]
+    },
+    {
+      "parameters": {
+        "model": "gpt-4o-mini",
+        "prompt": "Прочитай последние новости из RSS-лент о бесплатных событиях в Петербурге и создай пост для Telegram по следующим правилам:\n\n1. Используй эмодзи для категории в начале\n\n2. Структура: название → дата → место → стоимость → описание → инфо\n\n3. Убери HTML-теги, удали ссылки типа clck.ru, рекламу\n\n4. Максимум 500 символов для описания\n\n5. Если есть регистрация, упомяни её честно\n\nЧЕКЛИСТ:\n\n✓ Нет стоп-слов (ERID, реклама, регистрация как условие)\n\n✓ Есть дата и время события\n\n✓ Есть адрес или место проведения\n\n✓ Стоимость ясна (бесплатно/платно)\n\n✓ Текст понятен без ссылок\n\n✓ Категория определена правильно\n\n✓ Форматирование корректно (эмодзи, расстояния, переносы)\n\n✓ Длина поста не более 800-1000 символов\n\nДанные новости:\n{{$json}}"
+      },
+      "id": "openai",
+      "name": "Write Post",
+      "type": "n8n-nodes-base.openAi",
+      "typeVersion": 1,
+      "position": [
+        1480,
+        290
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "replace-me",
+          "name": "OpenAI"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{$env.TELEGRAM_CHANNEL_ID}}",
+        "text": "={{$json.text || $json.message || $json.choices?.[0]?.message?.content}}",
+        "additionalFields": {
+          "parse_mode": "HTML",
+          "disable_web_page_preview": true
+        }
+      },
+      "id": "telegram-post",
+      "name": "Send to Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [
+        1680,
+        290
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "replace-me",
+          "name": "Telegram"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": "={{$env.GOOGLE_SHEET_ID}}",
+        "sheetName": "log",
+        "data": "={{ {\"source_id\": $json.guid || $json.link || $json.title, \"title\": $json.title, \"link\": $json.link, \"published_at\": $json.isoDate || $json.pubDate, \"posted_at\": $now } }}"
+      },
+      "id": "log-post",
+      "name": "Log Post",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [
+        1880,
+        290
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "replace-me",
+          "name": "Google Sheets"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Schedule": {
+      "main": [
+        [
+          {
+            "node": "Sources Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Post Now Webhook": {
+      "main": [
+        [
+          {
+            "node": "Sources Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sources Sheet": {
+      "main": [
+        [
+          {
+            "node": "Split Sources",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Sources": {
+      "main": [
+        [
+          {
+            "node": "Read RSS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read RSS": {
+      "main": [
+        [
+          {
+            "node": "Check Duplicates",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Duplicates": {
+      "main": [
+        [
+          {
+            "node": "If New",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If New": {
+      "main": [
+        [
+          {
+            "node": "Write Post",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write Post": {
+      "main": [
+        [
+          {
+            "node": "Send to Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send to Telegram": {
+      "main": [
+        [
+          {
+            "node": "Log Post",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
