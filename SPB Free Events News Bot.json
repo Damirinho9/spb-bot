@@ -1,0 +1,874 @@
+{
+  "name": "SPB Free Events News Bot",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 11
+            },
+            {
+              "triggerAtHour": 14
+            },
+            {
+              "triggerAtHour": 18
+            }
+          ]
+        }
+      },
+      "id": "21549780-016b-4adb-bb14-39926ecdd30a",
+      "name": "Schedule (11, 14, 18)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        16,
+        -176
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "post-now",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "63c779b7-7643-4c56-a8d8-1bb22c8fc1df",
+      "name": "Webhook (ручной пост)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        16,
+        16
+      ],
+      "webhookId": "post-now-webhook"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1w923AnYPa-rSHDdgDfdbpXAFEm97u1QV",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "sources",
+          "mode": "name"
+        },
+        "options": {
+          "dataLocationOnSheet": {
+            "values": {
+              "rangeDefinition": "detectAutomatically"
+            }
+          }
+        }
+      },
+      "id": "c75ca0d2-881a-4af3-9b28-2544ed2e1d07",
+      "name": "Читаем источники",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        464,
+        -80
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "uGOwd5vPd6Kpt3a9",
+          "name": "Google Sheets account"
+        }
+      },
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "filter-active",
+              "leftValue": "={{ $json.active }}",
+              "rightValue": "TRUE",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "d6f7903e-ccdd-437b-bba3-3bf54797229b",
+      "name": "Только активные",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [
+        688,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "is-rss",
+              "leftValue": "={{ $json.type }}",
+              "rightValue": "rss",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "5ff7f24a-1d89-4171-b9b8-ac513c05e621",
+      "name": "RSS?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1120,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.url }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          }
+        }
+      },
+      "id": "4107985d-ea36-4bcc-a781-05aac60ac98b",
+      "name": "Fetch RSS",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1344,
+        -176
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Парсим RSS XML\nconst xml = $input.first().json.data;\nconst items = [];\n\n// Простой парсинг RSS\nconst itemRegex = /<item[^>]*>([\\s\\S]*?)<\\/item>/gi;\nlet match;\n\nwhile ((match = itemRegex.exec(xml)) !== null) {\n  const itemXml = match[1];\n  \n  const getTag = (tag) => {\n    const regex = new RegExp(`<${tag}[^>]*><!\\\\[CDATA\\\\[([\\\\s\\\\S]*?)\\\\]\\\\]><\\\\/${tag}>|<${tag}[^>]*>([\\\\s\\\\S]*?)<\\\\/${tag}>`, 'i');\n    const m = itemXml.match(regex);\n    return m ? (m[1] || m[2] || '').trim() : '';\n  };\n  \n  const title = getTag('title');\n  const link = getTag('link');\n  const description = getTag('description');\n  const pubDate = getTag('pubDate');\n  \n  // Ищем медиа\n  let mediaUrl = '';\n  const enclosureMatch = itemXml.match(/<enclosure[^>]*url=[\"']([^\"']+)[\"'][^>]*>/i);\n  if (enclosureMatch) mediaUrl = enclosureMatch[1];\n  \n  const mediaMatch = itemXml.match(/<media:content[^>]*url=[\"']([^\"']+)[\"'][^>]*>/i);\n  if (!mediaUrl && mediaMatch) mediaUrl = mediaMatch[1];\n  \n  const imgMatch = description.match(/<img[^>]*src=[\"']([^\"']+)[\"'][^>]*>/i);\n  if (!mediaUrl && imgMatch) mediaUrl = imgMatch[1];\n  \n  if (title) {\n    items.push({\n      title,\n      link,\n      description: description.replace(/<[^>]*>/g, '').substring(0, 1000),\n      pubDate,\n      mediaUrl,\n      source_id: $('Читаем источники').first().json.id,\n      source_name: $('Читаем источники').first().json.name\n    });\n  }\n}\n\n// Берём только последние 5 новостей\nreturn items.slice(0, 5).map(item => ({ json: item }));"
+      },
+      "id": "2d65b1cd-b028-472c-95a4-3fa1ea503c2d",
+      "name": "Parse RSS",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1568,
+        -176
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.url }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          }
+        }
+      },
+      "id": "eda756e6-64f4-4dff-b1e6-c791b597b112",
+      "name": "Fetch Telegram",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1344,
+        16
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Парсим Telegram widget страницу\nconst html = $input.first().json.data;\nconst items = [];\n\n// Ищем посты\nconst postRegex = /<div class=\"tgme_widget_message_wrap[^>]*>([\\s\\S]*?)<\\/div>\\s*<\\/div>\\s*<\\/div>/gi;\nlet match;\n\nwhile ((match = postRegex.exec(html)) !== null && items.length < 5) {\n  const postHtml = match[1];\n  \n  // Текст поста\n  const textMatch = postHtml.match(/<div class=\"tgme_widget_message_text[^>]*>([\\s\\S]*?)<\\/div>/i);\n  const text = textMatch ? textMatch[1].replace(/<[^>]*>/g, '').trim() : '';\n  \n  // Дата\n  const dateMatch = postHtml.match(/datetime=[\"']([^\"']+)[\"']/i);\n  const pubDate = dateMatch ? dateMatch[1] : '';\n  \n  // Ссылка на пост\n  const linkMatch = postHtml.match(/data-post=[\"']([^\"']+)[\"']/i);\n  const link = linkMatch ? `https://t.me/${linkMatch[1]}` : '';\n  \n  // Фото\n  let mediaUrl = '';\n  const imgMatch = postHtml.match(/background-image:url\\(['\"]?([^'\"\\)]+)['\"]?\\)/i);\n  if (imgMatch) mediaUrl = imgMatch[1];\n  \n  if (text && text.length > 20) {\n    items.push({\n      title: text.substring(0, 100),\n      link,\n      description: text.substring(0, 1000),\n      pubDate,\n      mediaUrl,\n      source_id: $('Читаем источники').first().json.id,\n      source_name: $('Читаем источники').first().json.name\n    });\n  }\n}\n\nreturn items.map(item => ({ json: item }));"
+      },
+      "id": "9e6819b7-4961-4748-9a21-22c29439c6f2",
+      "name": "Parse Telegram",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1568,
+        16
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "options": {}
+      },
+      "id": "20d37c2e-e60f-44c5-94aa-373008b6749d",
+      "name": "Объединяем новости",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        1792,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Создаём hash для проверки дублей\nconst crypto = require('crypto');\n\nconst items = $input.all();\nconst result = [];\n\nfor (const item of items) {\n  const data = item.json;\n  const hashInput = (data.title || '') + (data.pubDate || '');\n  const hash = crypto.createHash('md5').update(hashInput).digest('hex').substring(0, 12);\n  \n  result.push({\n    json: {\n      ...data,\n      content_hash: hash\n    }\n  });\n}\n\nreturn result;"
+      },
+      "id": "27de93aa-1554-460b-941c-6c6c2b862d2e",
+      "name": "Создаём hash",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1920,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1w923AnYPa-rSHDdgDfdbpXAFEm97u1QV",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "published",
+          "mode": "name"
+        },
+        "options": {}
+      },
+      "id": "bbadd3c5-34e1-4030-ad9c-91394957cd2e",
+      "name": "Читаем опубликованные",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        2240,
+        -80
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "uGOwd5vPd6Kpt3a9",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Фильтруем дубли\nconst news = $('Создаём hash').all();\nconst published = $('Читаем опубликованные').all();\n\nconst publishedHashes = new Set(\n  published.map(p => p.json.content_hash).filter(Boolean)\n);\n\nconst newItems = news.filter(item => \n  !publishedHashes.has(item.json.content_hash)\n);\n\n// Берём только 1 новость для публикации\nif (newItems.length === 0) {\n  return [];\n}\n\nreturn [newItems[0]];"
+      },
+      "id": "8b4bfb9b-791b-4eae-b83b-6ff6f5aaa141",
+      "name": "Убираем дубли",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2464,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1w923AnYPa-rSHDdgDfdbpXAFEm97u1QV",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "settings",
+          "mode": "name"
+        },
+        "options": {}
+      },
+      "id": "b5df73e5-38f8-47f8-a738-a88f2f4f6292",
+      "name": "Читаем настройки",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        2688,
+        -80
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "uGOwd5vPd6Kpt3a9",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Собираем данные для LLM\nconst news = $('Убираем дубли').first().json;\nconst settingsRows = $('Читаем настройки').all();\n\n// Преобразуем настройки в объект\nconst settings = {};\nfor (const row of settingsRows) {\n  settings[row.json.key] = row.json.value;\n}\n\nconst prompt = settings.prompt || 'Создай пост для Telegram';\nconst maxLength = settings.max_post_length || 1000;\n\nconst userMessage = `${prompt}\n\n---\nНовость для обработки:\n\nЗаголовок: ${news.title}\n\nОписание: ${news.description}\n\nДата: ${news.pubDate}\n\nИсточник: ${news.source_name}\n\n---\nМаксимальная длина поста: ${maxLength} символов`;\n\nreturn [{\n  json: {\n    ...news,\n    settings,\n    userMessage\n  }\n}];"
+      },
+      "id": "afb72fb3-5397-40d0-b77b-f8582df2e75b",
+      "name": "Готовим промт",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2912,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4o-mini"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "={{ $json.userMessage }}"
+            }
+          ]
+        },
+        "options": {
+          "maxTokens": 1000,
+          "temperature": 0.7
+        }
+      },
+      "id": "a3bad17c-d81a-4159-9feb-c516de0d06f8",
+      "name": "OpenAI: создаём пост",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        3136,
+        -80
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "ft9ZQPEC4h3cWRpc",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Извлекаем текст поста из ответа LLM\nconst input = $input.first().json;\nconst originalData = $('Готовим промт').first().json;\n\nlet postText = '';\nif (input.message && input.message.content) {\n  postText = input.message.content;\n} else if (input.text) {\n  postText = input.text;\n} else if (typeof input === 'string') {\n  postText = input;\n}\n\n// Очищаем от возможных markdown блоков\npostText = postText.replace(/```[\\s\\S]*?```/g, '').trim();\n\nreturn [{\n  json: {\n    post_text: postText,\n    media_url: originalData.mediaUrl || '',\n    content_hash: originalData.content_hash,\n    title: originalData.title,\n    link: originalData.link,\n    source_id: originalData.source_id,\n    settings: originalData.settings\n  }\n}];"
+      },
+      "id": "66ae5c55-7036-4fd6-9afd-2c4fe3043b79",
+      "name": "Извлекаем пост",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3488,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "has-media",
+              "leftValue": "={{ $json.media_url }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "e627f8d8-0346-44e6-8ff5-a05909878cfb",
+      "name": "Есть медиа?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        3712,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.settings.test_channel || '@kontentzavodn8npro' }}",
+        "text": "={{ $json.post_text }}",
+        "additionalFields": {
+          "parse_mode": "HTML"
+        }
+      },
+      "id": "3f191d79-449d-4186-bbb8-b90582d84b7e",
+      "name": "TG: только текст",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        3936,
+        16
+      ],
+      "webhookId": "7fbf82ec-9167-4671-9b04-d5474eb25045",
+      "credentials": {
+        "telegramApi": {
+          "id": "y6LOi4D9Lh9X3XHL",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "sendPhoto",
+        "chatId": "={{ $json.settings.test_channel || '@kontentzavodn8npro' }}",
+        "file": "={{ $json.media_url }}",
+        "additionalFields": {
+          "caption": "={{ $json.post_text }}",
+          "parse_mode": "HTML"
+        }
+      },
+      "id": "4de3980d-933f-4455-93cd-39ee0e05fe09",
+      "name": "TG: с фото",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        3936,
+        -176
+      ],
+      "webhookId": "6052b549-abbf-4b54-9847-c1f1cae4fc9b",
+      "credentials": {
+        "telegramApi": {
+          "id": "y6LOi4D9Lh9X3XHL",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "chooseBranch",
+        "output": "empty"
+      },
+      "id": "ce3533a9-b66d-4b7e-9a81-c76fe5f1b3d0",
+      "name": "После Telegram",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        4160,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1w923AnYPa-rSHDdgDfdbpXAFEm97u1QV",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "published"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "source_id": "={{ $('Извлекаем пост').first().json.source_id }}",
+            "content_hash": "={{ $('Извлекаем пост').first().json.content_hash }}",
+            "title": "={{ $('Извлекаем пост').first().json.title }}",
+            "original_url": "={{ $('Извлекаем пост').first().json.link }}",
+            "published_at": "={{ $now.format('yyyy-MM-dd HH:mm') }}",
+            "post_text": "={{ $('Извлекаем пост').first().json.post_text }}",
+            "media_url": "={{ $('Извлекаем пост').first().json.media_url }}"
+          }
+        },
+        "options": {}
+      },
+      "id": "9d33e7bc-1380-4161-87af-ef556ceb93e3",
+      "name": "Логируем в Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        4384,
+        -80
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "uGOwd5vPd6Kpt3a9",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "=Пост опубликован: {{ $('Извлекаем пост').first().json.title }}",
+        "options": {}
+      },
+      "id": "5962c818-30c7-455b-ab6d-184abef982c0",
+      "name": "Webhook Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        4608,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1w923AnYPa-rSHDdgDfdbpXAFEm97u1QV",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "sources",
+          "mode": "name"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        896,
+        -80
+      ],
+      "id": "a2095afb-30dc-4b66-ab6a-330702014d0e",
+      "name": "Get row(s) in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "uGOwd5vPd6Kpt3a9",
+          "name": "Google Sheets account"
+        }
+      }
+    }
+  ],
+  "pinData": {
+    "Webhook (ручной пост)": [
+      {
+        "json": {
+          "headers": {
+            "host": "magzhanovdamir.app.n8n.cloud",
+            "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36",
+            "content-length": "0",
+            "accept": "application/json",
+            "accept-encoding": "gzip, br",
+            "cdn-loop": "cloudflare; loops=1; subreqs=1",
+            "cf-connecting-ip": "64.227.21.251",
+            "cf-ew-via": "15",
+            "cf-ipcountry": "US",
+            "cf-ray": "9c1f0de6f39cc358-EWR",
+            "cf-visitor": "{\"scheme\":\"https\"}",
+            "cf-worker": "n8n.cloud",
+            "content-type": "application/json",
+            "x-forwarded-for": "64.227.21.251, 162.158.62.83",
+            "x-forwarded-host": "magzhanovdamir.app.n8n.cloud",
+            "x-forwarded-port": "443",
+            "x-forwarded-proto": "https",
+            "x-forwarded-server": "traefik-prod-users-gwc-6-58b64db885-6w5zf",
+            "x-is-trusted": "yes",
+            "x-real-ip": "64.227.21.251"
+          },
+          "params": {},
+          "query": {},
+          "body": {},
+          "webhookUrl": "https://magzhanovdamir.app.n8n.cloud/webhook/post-now",
+          "executionMode": "production"
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Schedule (11, 14, 18)": {
+      "main": [
+        [
+          {
+            "node": "Читаем источники",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook (ручной пост)": {
+      "main": [
+        [
+          {
+            "node": "Читаем источники",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Читаем источники": {
+      "main": [
+        [
+          {
+            "node": "Только активные",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Только активные": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RSS?": {
+      "main": [
+        [
+          {
+            "node": "Fetch RSS",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Fetch Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch RSS": {
+      "main": [
+        [
+          {
+            "node": "Parse RSS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse RSS": {
+      "main": [
+        [
+          {
+            "node": "Объединяем новости",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Telegram": {
+      "main": [
+        [
+          {
+            "node": "Parse Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Telegram": {
+      "main": [
+        [
+          {
+            "node": "Объединяем новости",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Объединяем новости": {
+      "main": [
+        [
+          {
+            "node": "Создаём hash",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Создаём hash": {
+      "main": [
+        [
+          {
+            "node": "Читаем опубликованные",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Читаем опубликованные": {
+      "main": [
+        [
+          {
+            "node": "Убираем дубли",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Убираем дубли": {
+      "main": [
+        [
+          {
+            "node": "Читаем настройки",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Читаем настройки": {
+      "main": [
+        [
+          {
+            "node": "Готовим промт",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Готовим промт": {
+      "main": [
+        [
+          {
+            "node": "OpenAI: создаём пост",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI: создаём пост": {
+      "main": [
+        [
+          {
+            "node": "Извлекаем пост",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Извлекаем пост": {
+      "main": [
+        [
+          {
+            "node": "Есть медиа?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Есть медиа?": {
+      "main": [
+        [
+          {
+            "node": "TG: с фото",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "TG: только текст",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "TG: с фото": {
+      "main": [
+        [
+          {
+            "node": "После Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "TG: только текст": {
+      "main": [
+        [
+          {
+            "node": "После Telegram",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "После Telegram": {
+      "main": [
+        [
+          {
+            "node": "Логируем в Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Логируем в Sheets": {
+      "main": [
+        [
+          {
+            "node": "Webhook Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet": {
+      "main": [
+        [
+          {
+            "node": "RSS?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "4c43c7c8-0fff-4692-ad9b-657e941d9214",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "f8f72cabe4df8ac721f550b9c15d7a93c0b520d28aa5540a9d6354bdc91ec5d3"
+  },
+  "id": "DkUmTtnd63z2OAP0XCrge",
+  "tags": []
+}
