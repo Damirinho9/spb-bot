@@ -1,0 +1,4 @@
+id,name,url,type,active
+1,Питер Бесплатно,https://t.me/s/freepeterburg,telegram,TRUE
+2,Free SPB VK,https://vk.com/freespb,vk,TRUE
+3,RSS Пример (отключен),https://example.com/rss.xml,rss,FALSE
