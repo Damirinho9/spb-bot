@@ -1,0 +1,33 @@
+HTTP/1.1 500 Internal Server Error
+
+Date: Fri, 23 Jan 2026 09:22:10 GMT
+
+Content-Type: application/json; charset=utf-8
+
+Content-Length: 31
+
+Connection: keep-alive
+
+CF-Ray: 9c26399b8a0e519b-EWR
+
+CF-Cache-Status: DYNAMIC
+
+ETag: W/"1f-ccITd5ldGQPMVB1CUICVlV/ylNg"
+
+Server: cloudflare
+
+Strict-Transport-Security: max-age=15552000; includeSubDomains
+
+Vary: Accept-Encoding, Accept-Encoding
+
+referrer-policy: same-origin
+
+x-content-type-options: nosniff
+
+x-frame-options: SAMEORIGIN
+
+Report-To: {"group":"cf-nel","max_age":604800,"endpoints":[{"url":"https://a.nel.cloudflare.com/report/v4?s=VU3c5RO9HyDeWGXroKR7M0WVb%2BXEJtgio6AD6lIlCzDXCZCxlHKIjHyXDlaurookBZWf0LdU8E4wwZTY7zBjpd1vDj%2BR%2FRcftSDdal26r00ydBWgu9d2%2BI%2BHGQ%3D%3D"}]}
+
+Nel: {"report_to":"cf-nel","success_fraction":0.0,"max_age":604800}
+
+{"message":"Error in workflow"}
