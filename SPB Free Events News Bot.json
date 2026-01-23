@@ -47,7 +47,7 @@
       "parameters": {
         "documentId": {
           "__rl": true,
-          "value": "{{ $env.GOOGLE_SHEET_ID || '1w923AnYPa-rSHDdgDfdbpXAFEm97u1QV' }}",
+          "value": "ВАШ_GOOGLE_SHEET_ID",
           "mode": "id"
         },
         "sheetName": {
@@ -316,7 +316,7 @@
       "parameters": {
         "documentId": {
           "__rl": true,
-          "value": "{{ $env.GOOGLE_SHEET_ID || '1w923AnYPa-rSHDdgDfdbpXAFEm97u1QV' }}",
+          "value": "ВАШ_GOOGLE_SHEET_ID",
           "mode": "id"
         },
         "sheetName": {
@@ -391,7 +391,7 @@
       "parameters": {
         "documentId": {
           "__rl": true,
-          "value": "{{ $env.GOOGLE_SHEET_ID || '1w923AnYPa-rSHDdgDfdbpXAFEm97u1QV' }}",
+          "value": "ВАШ_GOOGLE_SHEET_ID",
           "mode": "id"
         },
         "sheetName": {
@@ -662,7 +662,7 @@
         "operation": "append",
         "documentId": {
           "__rl": true,
-          "value": "{{ $env.GOOGLE_SHEET_ID || '1w923AnYPa-rSHDdgDfdbpXAFEm97u1QV' }}",
+          "value": "ВАШ_GOOGLE_SHEET_ID",
           "mode": "id"
         },
         "sheetName": {
