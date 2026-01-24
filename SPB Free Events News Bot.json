@@ -47,7 +47,7 @@
       "parameters": {
         "documentId": {
           "__rl": true,
-          "value": "{{ $env.GOOGLE_SHEET_ID || '1w923AnYPa-rSHDdgDfdbpXAFEm97u1QV' }}",
+          "value": "ВАШ_GOOGLE_SHEET_ID",
           "mode": "id"
         },
         "sheetName": {
@@ -316,7 +316,7 @@
       "parameters": {
         "documentId": {
           "__rl": true,
-          "value": "{{ $env.GOOGLE_SHEET_ID || '1w923AnYPa-rSHDdgDfdbpXAFEm97u1QV' }}",
+          "value": "ВАШ_GOOGLE_SHEET_ID",
           "mode": "id"
         },
         "sheetName": {
@@ -356,9 +356,42 @@
     },
     {
       "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "has-items",
+              "leftValue": "={{ $input.all().length }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-has-posts",
+      "name": "Есть посты?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2260,
+        0
+      ]
+    },
+    {
+      "parameters": {
         "documentId": {
           "__rl": true,
-          "value": "{{ $env.GOOGLE_SHEET_ID || '1w923AnYPa-rSHDdgDfdbpXAFEm97u1QV' }}",
+          "value": "ВАШ_GOOGLE_SHEET_ID",
           "mode": "id"
         },
         "sheetName": {
@@ -373,8 +406,8 @@
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.5,
       "position": [
-        2260,
-        0
+        2480,
+        -100
       ],
       "credentials": {
         "googleSheetsOAuth2Api": {
@@ -385,6 +418,21 @@
     },
     {
       "parameters": {
+        "respondWith": "text",
+        "responseBody": "⚠️ Нет новых постов для публикации. Все доступные новости уже были опубликованы.",
+        "options": {}
+      },
+      "id": "webhook-no-posts",
+      "name": "Webhook: нет постов",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        2480,
+        100
+      ]
+    },
+    {
+      "parameters": {
         "jsCode": "// Собираем данные для LLM\nconst news = $('Убираем дубли').first().json;\nconst settingsRows = $('Читаем настройки').all();\n\n// Преобразуем настройки в объект\nconst settings = {};\nfor (const row of settingsRows) {\n  settings[row.json.key] = row.json.value;\n}\n\n// Промпт по умолчанию (из задания)\nconst defaultPrompt = `Прочитай новость о бесплатном событии в Петербурге и создай пост для Telegram по следующим правилам:\n\n1. Используй эмодзи для категории в начале (🎭 культура, 🎨 выставки, 🎵 концерты, 🏃 спорт, 👨‍👩‍👧‍👦 для детей, 🎉 фестивали, 📚 лекции)\n\n2. Структура поста:\n   - Эмодзи + Название события\n   - 📅 Дата и время\n   - 📍 Место проведения (адрес)\n   - 💰 Стоимость (БЕСПЛАТНО или цена)\n   - Краткое описание (2-3 предложения)\n   - ℹ️ Дополнительная информация (регистрация, возраст и т.д.)\n\n3. Правила оформления:\n   - Убери все HTML-теги\n   - Удали рекламные ссылки (clck.ru, bit.ly и т.д.)\n   - Убери ERID и пометки о рекламе\n   - Не добавляй от себя информацию, которой нет в источнике\n   - Если нет точной даты - напиши \"уточняйте на месте\"\n\n4. Ограничения:\n   - Максимум 800 символов общая длина поста\n   - Описание не более 500 символов\n   - Используй переносы строк для читабельности\n\nЧЕКЛИСТ перед отправкой:\n✓ Есть эмодзи категории в начале\n✓ Указана дата/время события\n✓ Есть адрес или место\n✓ Понятно что бесплатно\n✓ Нет рекламных ссылок и стоп-слов\n✓ Текст читается без кликов по ссылкам`;\n\nconst prompt = settings.prompt || defaultPrompt;\nconst maxLength = settings.max_post_length || 800;\n\nconst userMessage = `${prompt}\n\n---\nИСХОДНАЯ НОВОСТЬ:\n\nЗаголовок: ${news.title}\n\nПолный текст: ${news.description}\n\nДата публикации: ${news.pubDate}\n\nИсточник: ${news.source_name}\n\n---\nМаксимальная длина поста: ${maxLength} символов.\nВыдай ТОЛЬКО текст поста, без пояснений.`;\n\nreturn [{\n  json: {\n    ...news,\n    settings,\n    userMessage,\n    maxLength\n  }\n}];"
       },
       "id": "prepare-prompt",
@@ -392,8 +440,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        2480,
-        0
+        2700,
+        -100
       ]
     },
     {
@@ -420,8 +468,8 @@
       "type": "@n8n/n8n-nodes-langchain.openAi",
       "typeVersion": 1.8,
       "position": [
-        2700,
-        0
+        2920,
+        -100
       ],
       "credentials": {
         "openAiApi": {
@@ -432,15 +480,15 @@
     },
     {
       "parameters": {
-        "jsCode": "// Извлекаем текст поста из ответа LLM\nconst input = $input.first().json;\nconst originalData = $('Готовим промт').first().json;\n\nlet postText = '';\n\n// Разные форматы ответа OpenAI\nif (input.message && input.message.content) {\n  postText = input.message.content;\n} else if (input.text) {\n  postText = input.text;\n} else if (input.content) {\n  postText = input.content;\n} else if (typeof input === 'string') {\n  postText = input;\n}\n\n// Очищаем от возможных markdown блоков\npostText = postText\n  .replace(/```[\\s\\S]*?```/g, '')\n  .replace(/^```\\w*\\n?/gm, '')\n  .replace(/```$/gm, '')\n  .trim();\n\n// Проверяем длину\nconst maxLength = originalData.maxLength || 800;\nif (postText.length > maxLength + 100) {\n  console.log(`Пост слишком длинный (${postText.length}), обрезаем`);\n  postText = postText.substring(0, maxLength) + '...';\n}\n\nconsole.log(`Пост готов, длина: ${postText.length} символов`);\n\nreturn [{\n  json: {\n    post_text: postText,\n    media_url: originalData.mediaUrl || '',\n    content_hash: originalData.content_hash,\n    title: originalData.title,\n    link: originalData.link,\n    source_id: originalData.source_id,\n    source_name: originalData.source_name,\n    settings: originalData.settings\n  }\n}];"
+        "jsCode": "// Извлекаем текст поста из ответа LLM\nconst input = $input.first().json;\nconst originalData = $('Готовим промпт').first().json;\n\nlet postText = '';\n\n// Разные форматы ответа OpenAI\nif (input.message && input.message.content) {\n  postText = input.message.content;\n} else if (input.text) {\n  postText = input.text;\n} else if (input.content) {\n  postText = input.content;\n} else if (typeof input === 'string') {\n  postText = input;\n}\n\n// Очищаем от возможных markdown блоков\npostText = postText\n  .replace(/```[\\s\\S]*?```/g, '')\n  .replace(/^```\\w*\\n?/gm, '')\n  .replace(/```$/gm, '')\n  .trim();\n\n// Проверяем длину\nconst maxLength = originalData.maxLength || 800;\nif (postText.length > maxLength + 100) {\n  console.log(`Пост слишком длинный (${postText.length}), обрезаем`);\n  postText = postText.substring(0, maxLength) + '...';\n}\n\nconsole.log(`Пост готов, длина: ${postText.length} символов`);\n\nreturn [{\n  json: {\n    post_text: postText,\n    media_url: originalData.mediaUrl || '',\n    content_hash: originalData.content_hash,\n    title: originalData.title,\n    link: originalData.link,\n    source_id: originalData.source_id,\n    source_name: originalData.source_name,\n    settings: originalData.settings\n  }\n}];"
       },
       "id": "extract-post",
       "name": "Извлекаем пост",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        2920,
-        0
+        3140,
+        -100
       ]
     },
     {
@@ -472,8 +520,8 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        3140,
-        0
+        3360,
+        -100
       ]
     },
     {
@@ -491,8 +539,8 @@
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        3360,
-        -100
+        3580,
+        -200
       ],
       "credentials": {
         "telegramApi": {
@@ -516,8 +564,8 @@
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        3360,
-        100
+        3580,
+        0
       ],
       "credentials": {
         "telegramApi": {
@@ -535,8 +583,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        3580,
-        -100
+        3800,
+        -200
       ]
     },
     {
@@ -568,8 +616,8 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        3800,
-        -100
+        4020,
+        -200
       ]
     },
     {
@@ -585,8 +633,8 @@
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        4020,
-        -200
+        4240,
+        -300
       ],
       "credentials": {
         "telegramApi": {
@@ -605,8 +653,8 @@
       "type": "n8n-nodes-base.merge",
       "typeVersion": 3,
       "position": [
-        4240,
-        0
+        4460,
+        -100
       ]
     },
     {
@@ -614,7 +662,7 @@
         "operation": "append",
         "documentId": {
           "__rl": true,
-          "value": "{{ $env.GOOGLE_SHEET_ID || '1w923AnYPa-rSHDdgDfdbpXAFEm97u1QV' }}",
+          "value": "ВАШ_GOOGLE_SHEET_ID",
           "mode": "id"
         },
         "sheetName": {
@@ -642,8 +690,8 @@
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.5,
       "position": [
-        4460,
-        0
+        4680,
+        -100
       ],
       "credentials": {
         "googleSheetsOAuth2Api": {
@@ -663,56 +711,8 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
       "position": [
-        4680,
-        0
-      ]
-    },
-    {
-      "parameters": {
-        "respondWith": "text",
-        "responseBody": "⚠️ Нет новых постов для публикации. Все доступные новости уже были опубликованы.",
-        "options": {}
-      },
-      "id": "webhook-no-posts",
-      "name": "Webhook: нет постов",
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1.1,
-      "position": [
-        2260,
-        200
-      ]
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict",
-            "version": 2
-          },
-          "conditions": [
-            {
-              "id": "has-items",
-              "leftValue": "={{ $input.all().length }}",
-              "rightValue": 0,
-              "operator": {
-                "type": "number",
-                "operation": "gt"
-              }
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
-      },
-      "id": "check-has-posts",
-      "name": "Есть посты?",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.2,
-      "position": [
-        2040,
-        200
+        4900,
+        -100
       ]
     }
   ],
@@ -889,6 +889,17 @@
       "main": [
         [
           {
+            "node": "Убираем дубли",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Убираем дубли": {
+      "main": [
+        [
+          {
             "node": "Есть посты?",
             "type": "main",
             "index": 0
@@ -900,7 +911,7 @@
       "main": [
         [
           {
-            "node": "Убираем дубли",
+            "node": "Читаем настройки",
             "type": "main",
             "index": 0
           }
@@ -908,17 +919,6 @@
         [
           {
             "node": "Webhook: нет постов",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Убираем дубли": {
-      "main": [
-        [
-          {
-            "node": "Читаем настройки",
             "type": "main",
             "index": 0
           }
@@ -1076,7 +1076,7 @@
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "2.0.0-fixed",
+  "versionId": "2.1.0-fixed-logic",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "f8f72cabe4df8ac721f550b9c15d7a93c0b520d28aa5540a9d6354bdc91ec5d3"
