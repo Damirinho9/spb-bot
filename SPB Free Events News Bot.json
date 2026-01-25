@@ -82,14 +82,14 @@
       "parameters": {
         "conditions": {
           "options": {
-            "caseSensitive": true,
+            "caseSensitive": false,
             "leftValue": "",
-            "typeValidation": "strict"
+            "typeValidation": "loose"
           },
           "conditions": [
             {
               "id": "filter-active",
-              "leftValue": "={{ $json.active }}",
+              "leftValue": "={{ String($json.active).toUpperCase() }}",
               "rightValue": "TRUE",
               "operator": {
                 "type": "string",
