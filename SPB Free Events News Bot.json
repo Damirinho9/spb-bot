@@ -17,13 +17,13 @@
           ]
         }
       },
-      "id": "21549780-016b-4adb-bb14-39926ecdd30a",
+      "id": "614f8443-f525-4680-8dfb-ebc6f7f69665",
       "name": "Schedule (11, 14, 18)",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
       "position": [
-        -200,
-        -80
+        -2032,
+        448
       ]
     },
     {
@@ -33,13 +33,13 @@
         "responseMode": "responseNode",
         "options": {}
       },
-      "id": "63c779b7-7643-4c56-a8d8-1bb22c8fc1df",
+      "id": "dae5a15c-6a29-4a88-9760-21b8647c5921",
       "name": "Webhook (ручной пост)",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
       "position": [
-        -200,
-        100
+        -2032,
+        624
       ],
       "webhookId": "post-now-webhook"
     },
@@ -47,7 +47,7 @@
       "parameters": {
         "documentId": {
           "__rl": true,
-          "value": "ВАШ_GOOGLE_SHEET_ID",
+          "value": "1tXEeXD_GGwOt5NViRpwzKBrpfASmfu1AlIlAjdlXWaQ",
           "mode": "id"
         },
         "sheetName": {
@@ -55,25 +55,19 @@
           "value": "sources",
           "mode": "name"
         },
-        "options": {
-          "dataLocationOnSheet": {
-            "values": {
-              "rangeDefinition": "detectAutomatically"
-            }
-          }
-        }
+        "options": {}
       },
-      "id": "c75ca0d2-881a-4af3-9b28-2544ed2e1d07",
+      "id": "850a87b4-66c9-47ed-84c2-dc86ca42775d",
       "name": "Читаем источники",
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.5,
       "position": [
-        60,
-        0
+        -1760,
+        512
       ],
       "credentials": {
         "googleSheetsOAuth2Api": {
-          "id": "uGOwd5vPd6Kpt3a9",
+          "id": "ZGMFZBzwb8Zx9k6C",
           "name": "Google Sheets account"
         }
       }
@@ -82,32 +76,35 @@
       "parameters": {
         "conditions": {
           "options": {
-            "caseSensitive": false,
+            "caseSensitive": true,
             "leftValue": "",
-            "typeValidation": "loose"
+            "typeValidation": "loose",
+            "version": 2
           },
           "conditions": [
             {
               "id": "filter-active",
-              "leftValue": "={{ String($json.active).toUpperCase() }}",
+              "leftValue": "={{ $json.active }}",
               "rightValue": "TRUE",
               "operator": {
-                "type": "string",
-                "operation": "equals"
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
               }
             }
           ],
           "combinator": "and"
         },
+        "looseTypeValidation": true,
         "options": {}
       },
-      "id": "d6f7903e-ccdd-437b-bba3-3bf54797229b",
+      "id": "853e9a75-57aa-41b0-9f91-eb685b893cd0",
       "name": "Только активные",
       "type": "n8n-nodes-base.filter",
       "typeVersion": 2.2,
       "position": [
-        280,
-        0
+        -1552,
+        528
       ]
     },
     {
@@ -134,13 +131,13 @@
         },
         "options": {}
       },
-      "id": "type-router-1",
+      "id": "14f779f4-7852-44c0-9ab0-f7e36fbc0a55",
       "name": "Telegram?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        500,
-        0
+        -1328,
+        528
       ]
     },
     {
@@ -167,13 +164,13 @@
         },
         "options": {}
       },
-      "id": "type-router-2",
+      "id": "5a4bdb51-1e96-487c-8de0-c0388d921ae3",
       "name": "RSS?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        720,
-        200
+        -1104,
+        736
       ]
     },
     {
@@ -188,29 +185,30 @@
           "timeout": 15000
         }
       },
-      "id": "fetch-telegram",
+      "id": "a6e0194a-d79f-4a4b-9972-b29082c65dd5",
       "name": "Fetch Telegram",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        720,
-        -100
+        -1104,
+        416
       ],
-      "onError": "continueRegularOutput",
-      "continueOnFail": true
+      "continueOnFail": true,
+      "onError": "continueRegularOutput"
     },
     {
       "parameters": {
-        "jsCode": "// Парсим Telegram widget страницу (t.me/s/channel)\nconst input = $input.first().json;\n\n// Проверяем на ошибки\nif (input.error || !input.data) {\n  console.log('Ошибка загрузки Telegram:', input.error || 'пустой ответ');\n  return [];\n}\n\nconst html = input.data;\nconst items = [];\nconst sourceData = $('Только активные').first().json;\n\n// Ищем посты с классом tgme_widget_message\nconst postRegex = /<div[^>]*class=\"[^\"]*tgme_widget_message_wrap[^\"]*\"[^>]*>[\\s\\S]*?<div[^>]*class=\"[^\"]*tgme_widget_message [^\"]*\"[^>]*data-post=\"([^\"]+)\"[^>]*>([\\s\\S]*?)<\\/div>\\s*<\\/div>\\s*<\\/div>/gi;\n\nlet match;\nwhile ((match = postRegex.exec(html)) !== null && items.length < 10) {\n  const postId = match[1];\n  const postHtml = match[2];\n  \n  // Текст поста\n  const textMatch = postHtml.match(/<div[^>]*class=\"[^\"]*tgme_widget_message_text[^\"]*\"[^>]*>([\\s\\S]*?)<\\/div>/i);\n  let text = textMatch ? textMatch[1] : '';\n  \n  // Убираем HTML теги, оставляем текст\n  text = text\n    .replace(/<br\\s*\\/?>/gi, '\\n')\n    .replace(/<[^>]*>/g, '')\n    .replace(/&nbsp;/g, ' ')\n    .replace(/&amp;/g, '&')\n    .replace(/&lt;/g, '<')\n    .replace(/&gt;/g, '>')\n    .replace(/&quot;/g, '\"')\n    .trim();\n  \n  // Дата\n  const dateMatch = postHtml.match(/datetime=\"([^\"]+)\"/i);\n  const pubDate = dateMatch ? dateMatch[1] : new Date().toISOString();\n  \n  // Ссылка на пост\n  const link = `https://t.me/${postId}`;\n  \n  // Фото - ищем в background-image\n  let mediaUrl = '';\n  const bgMatch = postHtml.match(/background-image:\\s*url\\(['\"]?([^'\"\\)]+)['\"]?\\)/i);\n  if (bgMatch) {\n    mediaUrl = bgMatch[1];\n  }\n  \n  // Также проверяем тег img\n  if (!mediaUrl) {\n    const imgMatch = postHtml.match(/<img[^>]*src=\"([^\"]+)\"[^>]*>/i);\n    if (imgMatch) {\n      mediaUrl = imgMatch[1];\n    }\n  }\n  \n  // Берём только посты с достаточным текстом\n  if (text && text.length > 30) {\n    items.push({\n      title: text.substring(0, 100).replace(/\\n/g, ' '),\n      link,\n      description: text.substring(0, 1500),\n      pubDate,\n      mediaUrl,\n      source_id: sourceData.id || 'telegram',\n      source_name: sourceData.name || 'Telegram',\n      source_type: 'telegram'\n    });\n  }\n}\n\nconsole.log(`Telegram: найдено ${items.length} постов`);\nreturn items.map(item => ({ json: item }));"
+        "jsCode": "// Парсим Telegram widget страницу (t.me/s/channel)\n// ИСПРАВЛЕНО: улучшенное извлечение фото\nconst input = $input.first().json;\n\nif (input.error || !input.data) {\n  console.log('Ошибка загрузки Telegram:', input.error || 'пустой ответ');\n  return [];\n}\n\nconst html = input.data;\nconst items = [];\nconst sourceData = $input.first().json || {};\n\n// Разбиваем HTML на отдельные посты\nconst postBlocks = html.split('tgme_widget_message_wrap').slice(1);\n\nfor (let i = 0; i < Math.min(postBlocks.length, 10); i++) {\n  const postHtml = postBlocks[i];\n  \n  // ID поста\n  const postIdMatch = postHtml.match(/data-post=\"([^\"]+)\"/i);\n  if (!postIdMatch) continue;\n  const postId = postIdMatch[1];\n  \n  // Текст поста\n  const textMatch = postHtml.match(/tgme_widget_message_text[^>]*>([\\s\\S]*?)<\\/div>/i);\n  let text = textMatch ? textMatch[1] : '';\n  \n  text = text\n    .replace(/<br\\s*\\/?>/gi, '\\n')\n    .replace(/<[^>]*>/g, '')\n    .replace(/&nbsp;/g, ' ')\n    .replace(/&amp;/g, '&')\n    .replace(/&lt;/g, '<')\n    .replace(/&gt;/g, '>')\n    .replace(/&quot;/g, '\"')\n    .replace(/&#39;/g, \"'\")\n    .trim();\n  \n  // Дата поста\n  const dateMatch = postHtml.match(/datetime=\"([^\"]+)\"/i);\n  const pubDate = dateMatch ? dateMatch[1] : new Date().toISOString();\n  \n  // === ФОТО - множественные методы поиска ===\n  let mediaUrl = '';\n  \n  // Метод 1: ищем в tgme_widget_message_photo_wrap\n  const photoWrapMatch = postHtml.match(/tgme_widget_message_photo_wrap[^>]*style=\"[^\"]*background-image:\\s*url\\(['\"]?([^'\"\\)]+)['\"]?\\)/i);\n  if (photoWrapMatch) {\n    mediaUrl = photoWrapMatch[1];\n  }\n  \n  // Метод 2: любой background-image с cdn telegram\n  if (!mediaUrl) {\n    const bgMatch = postHtml.match(/background-image:\\s*url\\(['\"]?(https:\\/\\/cdn[^'\"\\)\\s]+)['\"]?\\)/i);\n    if (bgMatch) mediaUrl = bgMatch[1];\n  }\n  \n  // Метод 3: тег img внутри photo блока\n  if (!mediaUrl) {\n    const imgInPhoto = postHtml.match(/tgme_widget_message_photo[^>]*>[\\s\\S]*?<img[^>]*src=\"([^\"]+)\"/i);\n    if (imgInPhoto) mediaUrl = imgInPhoto[1];\n  }\n  \n  // Метод 4: любой img с cdn4.telegram\n  if (!mediaUrl) {\n    const cdnImg = postHtml.match(/<img[^>]*src=\"(https:\\/\\/cdn[45]?\\.telegram[^\"]+)\"/i);\n    if (cdnImg) mediaUrl = cdnImg[1];\n  }\n  \n  // Метод 5: data-src для lazy loading\n  if (!mediaUrl) {\n    const dataSrc = postHtml.match(/data-src=\"(https:\\/\\/cdn[^\"]+)\"/i);\n    if (dataSrc) mediaUrl = dataSrc[1];\n  }\n  \n  // Метод 6: просто ищем URL картинки телеграма\n  if (!mediaUrl) {\n    const anyTgImg = postHtml.match(/https:\\/\\/cdn[45]?\\.telegram\\.org\\/file\\/[^\"'\\s\\)]+/i);\n    if (anyTgImg) mediaUrl = anyTgImg[0];\n  }\n  \n  const link = `https://t.me/${postId}`;\n  \n  if (text && text.length > 30) {\n    items.push({\n      title: text.substring(0, 100).replace(/\\n/g, ' '),\n      link,\n      description: text.substring(0, 1500),\n      pubDate,\n      mediaUrl,\n      source_id: sourceData.id || 'telegram',\n      source_name: sourceData.name || 'Telegram',\n      source_type: 'telegram'\n    });\n  }\n}\n\nconsole.log(`Telegram: найдено ${items.length} постов, с фото: ${items.filter(i => i.mediaUrl).length}`);\nreturn items.map(item => ({ json: item }));"
       },
-      "id": "parse-telegram",
+      "id": "0648225c-0d63-42d7-bc38-c5f6aa9c35c3",
       "name": "Parse Telegram",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        940,
-        -100
-      ]
+        -880,
+        416
+      ],
+      "alwaysOutputData": true
     },
     {
       "parameters": {
@@ -224,29 +222,30 @@
           "timeout": 15000
         }
       },
-      "id": "fetch-rss",
+      "id": "5a2d854f-e3e5-469c-8b3f-2427fd2ce8cf",
       "name": "Fetch RSS",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        940,
-        100
+        -880,
+        624
       ],
-      "onError": "continueRegularOutput",
-      "continueOnFail": true
+      "continueOnFail": true,
+      "onError": "continueRegularOutput"
     },
     {
       "parameters": {
-        "jsCode": "// Парсим RSS XML\nconst input = $input.first().json;\n\n// Проверяем на ошибки\nif (input.error || !input.data) {\n  console.log('Ошибка загрузки RSS:', input.error || 'пустой ответ');\n  return [];\n}\n\nconst xml = input.data;\nconst items = [];\nconst sourceData = $('Только активные').first().json;\n\n// Парсим RSS items\nconst itemRegex = /<item[^>]*>([\\s\\S]*?)<\\/item>/gi;\nlet match;\n\nwhile ((match = itemRegex.exec(xml)) !== null && items.length < 10) {\n  const itemXml = match[1];\n  \n  const getTag = (tag) => {\n    // Поддержка CDATA и обычного контента\n    const regex = new RegExp(`<${tag}[^>]*><!\\\\[CDATA\\\\[([\\\\s\\\\S]*?)\\\\]\\\\]><\\\\/${tag}>|<${tag}[^>]*>([\\\\s\\\\S]*?)<\\\\/${tag}>`, 'i');\n    const m = itemXml.match(regex);\n    return m ? (m[1] || m[2] || '').trim() : '';\n  };\n  \n  const title = getTag('title');\n  const link = getTag('link');\n  let description = getTag('description');\n  const pubDate = getTag('pubDate');\n  \n  // Убираем HTML из description\n  description = description\n    .replace(/<br\\s*\\/?>/gi, '\\n')\n    .replace(/<[^>]*>/g, '')\n    .replace(/&nbsp;/g, ' ')\n    .replace(/&amp;/g, '&')\n    .replace(/&lt;/g, '<')\n    .replace(/&gt;/g, '>')\n    .replace(/&quot;/g, '\"')\n    .trim();\n  \n  // Ищем медиа\n  let mediaUrl = '';\n  \n  // enclosure (стандартный RSS)\n  const enclosureMatch = itemXml.match(/<enclosure[^>]*url=[\"']([^\"']+)[\"'][^>]*>/i);\n  if (enclosureMatch) mediaUrl = enclosureMatch[1];\n  \n  // media:content\n  if (!mediaUrl) {\n    const mediaMatch = itemXml.match(/<media:content[^>]*url=[\"']([^\"']+)[\"'][^>]*>/i);\n    if (mediaMatch) mediaUrl = mediaMatch[1];\n  }\n  \n  // image внутри item\n  if (!mediaUrl) {\n    const imgMatch = itemXml.match(/<image[^>]*>([\\s\\S]*?)<\\/image>/i);\n    if (imgMatch) {\n      const urlMatch = imgMatch[1].match(/<url>([^<]+)<\\/url>/i);\n      if (urlMatch) mediaUrl = urlMatch[1];\n    }\n  }\n  \n  // Пропускаем служебные сообщения rss.app\n  if (title && !title.includes('Trial has Expired') && !title.includes('Action required')) {\n    items.push({\n      title,\n      link,\n      description: description.substring(0, 1500),\n      pubDate,\n      mediaUrl,\n      source_id: sourceData.id || 'rss',\n      source_name: sourceData.name || 'RSS',\n      source_type: 'rss'\n    });\n  }\n}\n\nconsole.log(`RSS: найдено ${items.length} постов`);\nreturn items.map(item => ({ json: item }));"
+        "jsCode": "// Парсим RSS XML\nconst input = $input.first().json;\n\nif (input.error || !input.data) {\n  console.log('Ошибка загрузки RSS:', input.error || 'пустой ответ');\n  return [];\n}\n\nconst xml = input.data;\nconst items = [];\nconst sourceData = $input.first().json || {};\n\nconst itemRegex = /<item[^>]*>([\\s\\S]*?)<\\/item>/gi;\nlet match;\n\nwhile ((match = itemRegex.exec(xml)) !== null && items.length < 10) {\n  const itemXml = match[1];\n  \n  const getTag = (tag) => {\n    const regex = new RegExp(`<${tag}[^>]*><!\\\\[CDATA\\\\[([\\\\s\\\\S]*?)\\\\]\\\\]><\\\\/${tag}>|<${tag}[^>]*>([\\\\s\\\\S]*?)<\\\\/${tag}>`, 'i');\n    const m = itemXml.match(regex);\n    return m ? (m[1] || m[2] || '').trim() : '';\n  };\n  \n  const title = getTag('title');\n  const link = getTag('link');\n  let description = getTag('description');\n  const pubDate = getTag('pubDate');\n  \n  description = description\n    .replace(/<br\\s*\\/?>/gi, '\\n')\n    .replace(/<[^>]*>/g, '')\n    .replace(/&nbsp;/g, ' ')\n    .replace(/&amp;/g, '&')\n    .replace(/&lt;/g, '<')\n    .replace(/&gt;/g, '>')\n    .replace(/&quot;/g, '\"')\n    .trim();\n  \n  let mediaUrl = '';\n  \n  const enclosureMatch = itemXml.match(/<enclosure[^>]*url=[\"']([^\"']+)[\"'][^>]*>/i);\n  if (enclosureMatch) mediaUrl = enclosureMatch[1];\n  \n  if (!mediaUrl) {\n    const mediaMatch = itemXml.match(/<media:content[^>]*url=[\"']([^\"']+)[\"'][^>]*>/i);\n    if (mediaMatch) mediaUrl = mediaMatch[1];\n  }\n  \n  if (!mediaUrl) {\n    const imgMatch = itemXml.match(/<image[^>]*>([\\s\\S]*?)<\\/image>/i);\n    if (imgMatch) {\n      const urlMatch = imgMatch[1].match(/<url>([^<]+)<\\/url>/i);\n      if (urlMatch) mediaUrl = urlMatch[1];\n    }\n  }\n  \n  if (title && !title.includes('Trial has Expired') && !title.includes('Action required')) {\n    items.push({\n      title,\n      link,\n      description: description.substring(0, 1500),\n      pubDate,\n      mediaUrl,\n      source_id: sourceData.id || 'rss',\n      source_name: sourceData.name || 'RSS',\n      source_type: 'rss'\n    });\n  }\n}\n\nconsole.log(`RSS: найдено ${items.length} постов`);\nreturn items.map(item => ({ json: item }));"
       },
-      "id": "parse-rss",
+      "id": "e05ed6cf-24c9-4e7e-8706-28de2b017e0f",
       "name": "Parse RSS",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1160,
-        100
-      ]
+        -672,
+        624
+      ],
+      "alwaysOutputData": true
     },
     {
       "parameters": {
@@ -260,29 +259,30 @@
           "timeout": 15000
         }
       },
-      "id": "fetch-vk",
+      "id": "25172795-265e-4018-a18b-164838a22c8e",
       "name": "Fetch VK",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        940,
-        300
+        -880,
+        832
       ],
-      "onError": "continueRegularOutput",
-      "continueOnFail": true
+      "continueOnFail": true,
+      "onError": "continueRegularOutput"
     },
     {
       "parameters": {
-        "jsCode": "// Парсим VK публичную страницу\nconst input = $input.first().json;\n\n// Проверяем на ошибки\nif (input.error || !input.data) {\n  console.log('Ошибка загрузки VK:', input.error || 'пустой ответ');\n  return [];\n}\n\nconst html = input.data;\nconst items = [];\nconst sourceData = $('Только активные').first().json;\n\n// VK использует JSON в page для постов\n// Ищем посты в формате wall_post\nconst postRegex = /<div[^>]*class=\"[^\"]*wall_item[^\"]*\"[^>]*id=\"post([^\"]+)\"[^>]*>([\\s\\S]*?)<\\/div>\\s*<\\/div>\\s*<\\/div>/gi;\n\n// Альтернативный парсинг через data-post-id\nconst altPostRegex = /<div[^>]*data-post-id=\"([^\"]+)\"[^>]*>([\\s\\S]*?)<div[^>]*class=\"[^\"]*wall_post_cont[^\"]*\"[^>]*>([\\s\\S]*?)<\\/div>/gi;\n\nlet match;\n\n// Простой парсинг текста постов\nconst textBlocks = html.match(/<div[^>]*class=\"[^\"]*wall_post_text[^\"]*\"[^>]*>([\\s\\S]*?)<\\/div>/gi) || [];\n\nfor (let i = 0; i < Math.min(textBlocks.length, 10); i++) {\n  const block = textBlocks[i];\n  let text = block\n    .replace(/<br\\s*\\/?>/gi, '\\n')\n    .replace(/<[^>]*>/g, '')\n    .replace(/&nbsp;/g, ' ')\n    .replace(/&amp;/g, '&')\n    .replace(/&lt;/g, '<')\n    .replace(/&gt;/g, '>')\n    .replace(/&quot;/g, '\"')\n    .trim();\n  \n  if (text && text.length > 30) {\n    items.push({\n      title: text.substring(0, 100).replace(/\\n/g, ' '),\n      link: sourceData.url || 'https://vk.com',\n      description: text.substring(0, 1500),\n      pubDate: new Date().toISOString(),\n      mediaUrl: '',\n      source_id: sourceData.id || 'vk',\n      source_name: sourceData.name || 'VK',\n      source_type: 'vk'\n    });\n  }\n}\n\nconsole.log(`VK: найдено ${items.length} постов`);\nreturn items.map(item => ({ json: item }));"
+        "jsCode": "// Парсим VK публичную страницу\nconst input = $input.first().json;\n\nif (input.error || !input.data) {\n  console.log('Ошибка загрузки VK:', input.error || 'пустой ответ');\n  return [];\n}\n\nconst html = input.data;\nconst items = [];\nconst sourceData = $input.first().json || {};\n\nconst textBlocks = html.match(/<div[^>]*class=\"[^\"]*wall_post_text[^\"]*\"[^>]*>([\\s\\S]*?)<\\/div>/gi) || [];\n\nfor (let i = 0; i < Math.min(textBlocks.length, 10); i++) {\n  const block = textBlocks[i];\n  let text = block\n    .replace(/<br\\s*\\/?>/gi, '\\n')\n    .replace(/<[^>]*>/g, '')\n    .replace(/&nbsp;/g, ' ')\n    .replace(/&amp;/g, '&')\n    .replace(/&lt;/g, '<')\n    .replace(/&gt;/g, '>')\n    .replace(/&quot;/g, '\"')\n    .trim();\n  \n  if (text && text.length > 30) {\n    items.push({\n      title: text.substring(0, 100).replace(/\\n/g, ' '),\n      link: sourceData.url || 'https://vk.com',\n      description: text.substring(0, 1500),\n      pubDate: new Date().toISOString(),\n      mediaUrl: '',\n      source_id: sourceData.id || 'vk',\n      source_name: sourceData.name || 'VK',\n      source_type: 'vk'\n    });\n  }\n}\n\nconsole.log(`VK: найдено ${items.length} постов`);\nreturn items.map(item => ({ json: item }));"
       },
-      "id": "parse-vk",
+      "id": "d22a7422-2e44-4b04-a082-a54540bd3793",
       "name": "Parse VK",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1160,
-        300
-      ]
+        -672,
+        832
+      ],
+      "alwaysOutputData": true
     },
     {
       "parameters": {
@@ -290,33 +290,33 @@
         "combineBy": "combineAll",
         "options": {}
       },
-      "id": "merge-news",
+      "id": "0254591b-6756-4c30-b7c6-15f75c43bca5",
       "name": "Объединяем новости",
       "type": "n8n-nodes-base.merge",
       "typeVersion": 3,
       "position": [
-        1380,
-        0
+        -448,
+        528
       ]
     },
     {
       "parameters": {
-        "jsCode": "// Создаём hash для проверки дублей + фильтрация + проверка на старые посты\nconst crypto = require('crypto');\n\nconst items = $input.all();\nconst result = [];\nconst now = new Date();\n\n// Стоп-слова для фильтрации рекламы\nconst stopWords = ['ERID', 'erid', 'реклама', 'Реклама', 'РЕКЛАМА', 'партнёрский', 'партнерский', 'промокод', '#реклама', '#ad', 'спонсор'];\n\n// Функция нормализации текста для хеша\nfunction normalizeForHash(text) {\n  if (!text) return '';\n  return text.toLowerCase()\n    .replace(/[^а-яёa-z0-9]/gi, '')\n    .substring(0, 100); // Первые 100 значимых символов\n}\n\n// Функция проверки на прошедшие даты в тексте\nfunction hasPastEventDate(text) {\n  if (!text) return false;\n  const months = {\n    'января': 0, 'февраля': 1, 'марта': 2, 'апреля': 3, 'мая': 4, 'июня': 5,\n    'июля': 6, 'августа': 7, 'сентября': 8, 'октября': 9, 'ноября': 10, 'декабря': 11\n  };\n  // Ищем даты вида \"15 октября\", \"1-5 ноября\"\n  const datePattern = /(\\d{1,2})(?:\\s*[-–]\\s*\\d{1,2})?\\s+(января|февраля|марта|апреля|мая|июня|июля|августа|сентября|октября|ноября|декабря)/gi;\n  let match;\n  while ((match = datePattern.exec(text)) !== null) {\n    const day = parseInt(match[1]);\n    const monthName = match[2].toLowerCase();\n    const month = months[monthName];\n    if (month !== undefined) {\n      // Предполагаем текущий или следующий год\n      let year = now.getFullYear();\n      const eventDate = new Date(year, month, day);\n      // Если дата в прошлом более чем на 7 дней\n      const diffDays = (now - eventDate) / (1000 * 60 * 60 * 24);\n      if (diffDays > 7) {\n        console.log(`Прошедшее событие (${day} ${monthName}):`, text.substring(0, 50));\n        return true;\n      }\n    }\n  }\n  return false;\n}\n\nfor (const item of items) {\n  const data = item.json;\n  const text = (data.title || '') + ' ' + (data.description || '');\n  \n  // Проверяем на стоп-слова\n  const hasStopWord = stopWords.some(word => text.includes(word));\n  if (hasStopWord) {\n    console.log('Пропускаем рекламу:', data.title?.substring(0, 50));\n    continue;\n  }\n  \n  // Проверяем на прошедшие события\n  if (hasPastEventDate(text)) {\n    continue;\n  }\n  \n  // Проверяем свежесть поста (не старше 14 дней)\n  if (data.pubDate) {\n    const postDate = new Date(data.pubDate);\n    const ageDays = (now - postDate) / (1000 * 60 * 60 * 24);\n    if (ageDays > 14) {\n      console.log('Старый пост (', Math.floor(ageDays), 'дней):', data.title?.substring(0, 50));\n      continue;\n    }\n  }\n  \n  // Создаём hash на основе НОРМАЛИЗОВАННОГО заголовка (без pubDate!)\n  // Это позволит ловить дубли одного события из разных источников\n  const hashInput = normalizeForHash(data.title);\n  const hash = crypto.createHash('md5').update(hashInput).digest('hex').substring(0, 12);\n  \n  result.push({\n    json: {\n      ...data,\n      content_hash: hash\n    }\n  });\n}\n\nconsole.log(`После фильтрации: ${result.length} постов`);\nreturn result;"
+        "jsCode": "// Создаём hash + фильтрация рекламы + ФИЛЬТР ПРОШЕДШИХ ДАТ\nconst crypto = require('crypto');\n\nconst items = $input.all();\nconst result = [];\nconst now = new Date();\n\nconst stopWords = ['ERID', 'erid', 'реклама', 'Реклама', 'РЕКЛАМА', 'партнёрский', 'партнерский', 'промокод', '#реклама', '#ad', 'спонсор'];\n\n// Месяцы для парсинга дат\nconst months = {\n  'января': 0, 'февраля': 1, 'марта': 2, 'апреля': 3, 'мая': 4, 'июня': 5,\n  'июля': 6, 'августа': 7, 'сентября': 8, 'октября': 9, 'ноября': 10, 'декабря': 11\n};\n\n// Проверка на прошедшую дату события\nfunction hasPastEventDate(text) {\n  if (!text) return false;\n  \n  // Паттерн: \"15 октября\", \"1-5 ноября\", \"с 10 по 15 декабря\"\n  const datePattern = /(\\d{1,2})(?:\\s*[-–]\\s*\\d{1,2})?\\s+(января|февраля|марта|апреля|мая|июня|июля|августа|сентября|октября|ноября|декабря)/gi;\n  \n  let match;\n  while ((match = datePattern.exec(text)) !== null) {\n    const day = parseInt(match[1]);\n    const monthName = match[2].toLowerCase();\n    const month = months[monthName];\n    \n    if (month !== undefined) {\n      let year = now.getFullYear();\n      const eventDate = new Date(year, month, day, 23, 59, 59);\n      \n      // Если дата уже прошла более чем на 1 день\n      const diffDays = (now - eventDate) / (1000 * 60 * 60 * 24);\n      if (diffDays > 1) {\n        console.log(`ПРОПУСК прошедшего события (${day} ${monthName}): ${text.substring(0, 60)}...`);\n        return true;\n      }\n    }\n  }\n  return false;\n}\n\nfor (const item of items) {\n  const data = item.json;\n  const text = (data.title || '') + ' ' + (data.description || '');\n  \n  // Проверяем на стоп-слова (реклама)\n  const hasStopWord = stopWords.some(word => text.includes(word));\n  if (hasStopWord) {\n    console.log('Пропускаем рекламу:', data.title?.substring(0, 50));\n    continue;\n  }\n  \n  // НОВОЕ: Проверяем на прошедшие события\n  if (hasPastEventDate(text)) {\n    continue;\n  }\n  \n  // Проверяем свежесть поста (не старше 14 дней)\n  if (data.pubDate) {\n    const postDate = new Date(data.pubDate);\n    const ageDays = (now - postDate) / (1000 * 60 * 60 * 24);\n    if (ageDays > 14) {\n      console.log(`Старый пост (${Math.floor(ageDays)} дней):`, data.title?.substring(0, 50));\n      continue;\n    }\n  }\n  \n  // ИСПРАВЛЕНО: Hash только по заголовку (без pubDate) для ловли дублей\n  const hashInput = (data.title || '').toLowerCase().replace(/[^а-яёa-z0-9]/gi, '').substring(0, 100);\n  const hash = crypto.createHash('md5').update(hashInput).digest('hex').substring(0, 12);\n  \n  result.push({\n    json: {\n      ...data,\n      content_hash: hash\n    }\n  });\n}\n\nconsole.log(`После фильтрации: ${result.length} постов`);\nreturn result;"
       },
-      "id": "create-hash",
+      "id": "958d8f27-1d63-4d5a-a744-b454e9ea7898",
       "name": "Фильтруем и создаём hash",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1600,
-        0
+        -224,
+        528
       ]
     },
     {
       "parameters": {
         "documentId": {
           "__rl": true,
-          "value": "ВАШ_GOOGLE_SHEET_ID",
+          "value": "1tXEeXD_GGwOt5NViRpwzKBrpfASmfu1AlIlAjdlXWaQ",
           "mode": "id"
         },
         "sheetName": {
@@ -326,32 +326,32 @@
         },
         "options": {}
       },
-      "id": "read-published",
+      "id": "55240c2e-1316-44d5-aca5-64d09e452193",
       "name": "Читаем опубликованные",
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.5,
       "position": [
-        1820,
-        0
+        0,
+        528
       ],
       "credentials": {
         "googleSheetsOAuth2Api": {
-          "id": "uGOwd5vPd6Kpt3a9",
+          "id": "ZGMFZBzwb8Zx9k6C",
           "name": "Google Sheets account"
         }
       }
     },
     {
       "parameters": {
-        "jsCode": "// Убираем уже опубликованные новости + семантическая дедупликация\nconst news = $('Фильтруем и создаём hash').all();\nconst published = $('Читаем опубликованные').all();\n\n// Функция нормализации для сравнения\nfunction normalize(text) {\n  if (!text) return '';\n  return text.toLowerCase()\n    .replace(/[^а-яёa-z0-9\\s]/gi, '')\n    .replace(/\\s+/g, ' ')\n    .trim();\n}\n\n// Функция извлечения ключевых слов события\nfunction extractEventKeywords(text) {\n  if (!text) return [];\n  const normalized = normalize(text);\n  // Ключевые слова событий\n  const eventWords = normalized.match(/(?:фестиваль|выставка|концерт|лекция|мастер.класс|экскурсия|праздник|шоу|спектакль|ярмарка)[а-яё]*/gi) || [];\n  // Первые 3 значимых слова (без предлогов)\n  const stopWords = ['в', 'на', 'и', 'с', 'по', 'для', 'от', 'до', 'из', 'за', 'о', 'об', 'при', 'что', 'как', 'это', 'все', 'вас', 'вам', 'мы', 'вы', 'не', 'да', 'нет'];\n  const words = normalized.split(' ').filter(w => w.length > 2 && !stopWords.includes(w)).slice(0, 5);\n  return [...eventWords, ...words];\n}\n\n// Функция проверки схожести\nfunction isSimilarEvent(title1, title2) {\n  const kw1 = extractEventKeywords(title1);\n  const kw2 = extractEventKeywords(title2);\n  if (kw1.length === 0 || kw2.length === 0) return false;\n  const common = kw1.filter(w => kw2.some(w2 => w2.includes(w) || w.includes(w2)));\n  return common.length >= 2; // Минимум 2 общих ключевых слова\n}\n\n// Собираем все hash опубликованных\nconst publishedHashes = new Set(\n  published.map(p => p.json.content_hash).filter(Boolean)\n);\n\n// Собираем заголовки опубликованных для семантической проверки\nconst publishedTitles = published.map(p => p.json.title).filter(Boolean);\n\nconsole.log(`Опубликовано ранее: ${publishedHashes.size} постов`);\n\n// Фильтруем новые (по хешу И по семантике)\nconst newItems = news.filter(item => {\n  // Проверка по хешу\n  if (publishedHashes.has(item.json.content_hash)) {\n    console.log('Дубль по хешу:', item.json.title?.substring(0, 50));\n    return false;\n  }\n  // Семантическая проверка - есть ли похожее событие\n  const similarPublished = publishedTitles.find(pt => isSimilarEvent(item.json.title, pt));\n  if (similarPublished) {\n    console.log('Семантический дубль:', item.json.title?.substring(0, 50), '~', similarPublished?.substring(0, 50));\n    return false;\n  }\n  return true;\n});\n\nconsole.log(`Новых постов после дедупликации: ${newItems.length}`);\n\n// Берём только 1 новость для публикации\nif (newItems.length === 0) {\n  console.log('Нет новых постов для публикации');\n  return [];\n}\n\n// Сортируем по дате (новые первые)\nnewItems.sort((a, b) => {\n  const dateA = new Date(a.json.pubDate || 0);\n  const dateB = new Date(b.json.pubDate || 0);\n  return dateB - dateA;\n});\n\nreturn [newItems[0]];"
+        "jsCode": "// Убираем дубли + семантическая проверка похожих событий\nconst news = $('Фильтруем и создаём hash').all();\nconst published = $('Читаем опубликованные').all();\n\n// Нормализация текста для сравнения\nfunction normalize(text) {\n  if (!text) return '';\n  return text.toLowerCase()\n    .replace(/[^а-яёa-z0-9\\s]/gi, '')\n    .replace(/\\s+/g, ' ')\n    .trim();\n}\n\n// Извлечение ключевых слов события\nfunction extractKeywords(text) {\n  if (!text) return [];\n  const normalized = normalize(text);\n  const stopWords = ['в', 'на', 'и', 'с', 'по', 'для', 'от', 'до', 'из', 'за', 'о', 'об', 'при', 'что', 'как', 'это', 'все', 'вас', 'вам', 'мы', 'вы', 'не', 'да', 'нет', 'будет', 'где', 'вход', 'бесплатно'];\n  return normalized.split(' ').filter(w => w.length > 3 && !stopWords.includes(w)).slice(0, 8);\n}\n\n// Проверка похожести событий\nfunction isSimilarEvent(title1, title2) {\n  const kw1 = extractKeywords(title1);\n  const kw2 = extractKeywords(title2);\n  if (kw1.length < 2 || kw2.length < 2) return false;\n  const common = kw1.filter(w => kw2.some(w2 => w2.includes(w) || w.includes(w2)));\n  return common.length >= 3; // 3+ общих слов = похожее событие\n}\n\nconst publishedHashes = new Set(\n  published.map(p => p.json.content_hash).filter(Boolean)\n);\n\nconst publishedTitles = published.map(p => p.json.title).filter(Boolean);\n\nconsole.log(`Опубликовано ранее: ${publishedHashes.size} постов`);\n\nconst newItems = news.filter(item => {\n  // Проверка по хешу\n  if (publishedHashes.has(item.json.content_hash)) {\n    console.log('Дубль по хешу:', item.json.title?.substring(0, 50));\n    return false;\n  }\n  \n  // Семантическая проверка\n  const similar = publishedTitles.find(pt => isSimilarEvent(item.json.title, pt));\n  if (similar) {\n    console.log('Похожее событие:', item.json.title?.substring(0, 40), '~', similar?.substring(0, 40));\n    return false;\n  }\n  \n  return true;\n});\n\nconsole.log(`Новых постов: ${newItems.length}`);\n\nif (newItems.length === 0) {\n  return [];\n}\n\n// Сортируем по дате и берём 1\nnewItems.sort((a, b) => {\n  const dateA = new Date(a.json.pubDate || 0);\n  const dateB = new Date(b.json.pubDate || 0);\n  return dateB - dateA;\n});\n\nreturn [newItems[0]];"
       },
-      "id": "remove-duplicates",
+      "id": "97007357-60a4-44cc-b8f0-714d41bc94ee",
       "name": "Убираем дубли",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        2040,
-        0
+        224,
+        528
       ]
     },
     {
@@ -378,20 +378,20 @@
         },
         "options": {}
       },
-      "id": "check-has-posts",
+      "id": "73fe68ee-7986-4e91-a4e9-a2ab709e278f",
       "name": "Есть посты?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        2260,
-        0
+        432,
+        528
       ]
     },
     {
       "parameters": {
         "documentId": {
           "__rl": true,
-          "value": "ВАШ_GOOGLE_SHEET_ID",
+          "value": "1tXEeXD_GGwOt5NViRpwzKBrpfASmfu1AlIlAjdlXWaQ",
           "mode": "id"
         },
         "sheetName": {
@@ -401,17 +401,17 @@
         },
         "options": {}
       },
-      "id": "read-settings",
+      "id": "071ddcac-058a-486e-a052-bcb2ee113c28",
       "name": "Читаем настройки",
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.5,
       "position": [
-        2480,
-        -100
+        656,
+        416
       ],
       "credentials": {
         "googleSheetsOAuth2Api": {
-          "id": "uGOwd5vPd6Kpt3a9",
+          "id": "ZGMFZBzwb8Zx9k6C",
           "name": "Google Sheets account"
         }
       }
@@ -419,29 +419,29 @@
     {
       "parameters": {
         "respondWith": "text",
-        "responseBody": "⚠️ Нет новых постов для публикации. Все доступные новости уже были опубликованы.",
+        "responseBody": "Нет новых постов для публикации. Все доступные новости уже были опубликованы.",
         "options": {}
       },
-      "id": "webhook-no-posts",
+      "id": "63c20719-f7b3-4b89-8d1b-5dfa244706cc",
       "name": "Webhook: нет постов",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
       "position": [
-        2480,
-        100
+        656,
+        624
       ]
     },
     {
       "parameters": {
-        "jsCode": "// Собираем данные для LLM\nconst news = $('Убираем дубли').first().json;\nconst settingsRows = $('Читаем настройки').all();\n\n// Преобразуем настройки в объект\nconst settings = {};\nfor (const row of settingsRows) {\n  settings[row.json.key] = row.json.value;\n}\n\n// Промпт по умолчанию (из задания)\nconst defaultPrompt = `Прочитай новость о бесплатном событии в Петербурге и создай пост для Telegram.\n\n⚠️ КРИТИЧЕСКИ ВАЖНО - ЗАПРЕТ НА ГАЛЛЮЦИНАЦИИ:\n- НИКОГДА не выдумывай даты, время, адреса или места!\n- Если в источнике НЕТ точной даты - пиши \"уточняйте на сайте организатора\"\n- Если в источнике НЕТ адреса - пиши \"уточняйте место проведения\"\n- Используй ТОЛЬКО информацию из исходного текста!\n- Не \"улучшай\" и не \"дополняй\" информацию!\n\n1. Эмодзи для категории: 🎭 культура, 🎨 выставки, 🎵 концерты, 🏃 спорт, 👨‍👩‍👧‍👦 для детей, 🎉 фестивали, 📚 лекции\n\n2. Структура:\n   - Эмодзи + Название события (точно как в источнике!)\n   - 📅 Дата и время (ТОЛЬКО если есть в источнике!)\n   - 📍 Место (ТОЛЬКО если указано в источнике!)\n   - 💰 БЕСПЛАТНО\n   - Краткое описание (2-3 предложения из источника)\n   - ℹ️ Доп. информация (регистрация, возраст)\n\n3. Оформление:\n   - Убери HTML-теги\n   - Удали рекламные ссылки (clck.ru, bit.ly)\n   - Убери ERID и пометки о рекламе\n   - Используй переносы строк\n\n4. Ограничения: максимум 800 символов\n\nЧЕКЛИСТ:\n✓ Вся информация взята ТОЛЬКО из источника\n✓ НЕТ выдуманных дат/мест\n✓ Есть эмодзи категории\n✓ Понятно что бесплатно`;\n\nconst prompt = settings.prompt || defaultPrompt;\nconst maxLength = settings.max_post_length || 800;\n\nconst userMessage = `${prompt}\n\n---\nИСХОДНАЯ НОВОСТЬ:\n\nЗаголовок: ${news.title}\n\nПолный текст: ${news.description}\n\nДата публикации: ${news.pubDate}\n\nИсточник: ${news.source_name}\n\n---\nМаксимальная длина поста: ${maxLength} символов.\nВыдай ТОЛЬКО текст поста, без пояснений.`;\n\nreturn [{\n  json: {\n    ...news,\n    settings,\n    userMessage,\n    maxLength\n  }\n}];"
+        "jsCode": "// Собираем данные для LLM\nconst news = $('Убираем дубли').first().json;\nconst settingsRows = $('Читаем настройки').all();\n\nconst settings = {};\nfor (const row of settingsRows) {\n  settings[row.json.key] = row.json.value;\n}\n\n// ИСПРАВЛЕННЫЙ ПРОМПТ - запрет галлюцинаций\nconst defaultPrompt = `Ты - редактор Telegram-канала о бесплатных событиях в Петербурге.\n\nКРИТИЧЕСКИ ВАЖНО - СТРОГИЕ ПРАВИЛА:\n1. НИКОГДА не выдумывай информацию!\n2. Если в тексте НЕТ точной даты - пиши \"Уточняйте на месте\"\n3. Если в тексте НЕТ адреса - пиши \"Уточняйте место проведения\"\n4. Бери ТОЛЬКО факты из исходного текста!\n5. НЕ добавляй детали от себя!\n\nФОРМАТ ПОСТА:\n[Эмодзи категории] Название события\n\n📅 [Дата из текста ИЛИ \"Уточняйте на месте\"]\n📍 [Адрес из текста ИЛИ \"Уточняйте место проведения\"]\n💰 БЕСПЛАТНО\n\n[2-3 предложения из источника]\n\nℹ️ [Регистрация/возраст если указано]\n\nЭмодзи категорий: 🎭 культура, 🎨 выставки, 🎵 концерты, 🏃 спорт, 👨‍👩‍👧‍👦 дети, 🎉 фестивали, 📚 лекции\n\nМаксимум 700 символов. Убери HTML-теги и рекламные ссылки.`;\n\nconst prompt = settings.prompt || defaultPrompt;\nconst maxLength = settings.max_post_length || 700;\n\nconst userMessage = `${prompt}\n\n---\nИСХОДНЫЙ ТЕКСТ:\n\n${news.description}\n\nИсточник: ${news.source_name}\n---\n\nВыдай ТОЛЬКО текст поста.`;\n\nreturn [{\n  json: {\n    ...news,\n    settings,\n    userMessage,\n    maxLength\n  }\n}];"
       },
-      "id": "prepare-prompt",
+      "id": "4a0a1db8-48c5-4a79-b3e4-949d268c8ed8",
       "name": "Готовим промпт",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        2700,
-        -100
+        880,
+        416
       ]
     },
     {
@@ -460,35 +460,35 @@
         },
         "options": {
           "maxTokens": 1000,
-          "temperature": 0.7
+          "temperature": 0.3
         }
       },
-      "id": "openai-create-post",
+      "id": "719a87e2-5ef0-4df1-ad81-f905a87caed2",
       "name": "OpenAI: создаём пост",
       "type": "@n8n/n8n-nodes-langchain.openAi",
       "typeVersion": 1.8,
       "position": [
-        2920,
-        -100
+        1040,
+        416
       ],
       "credentials": {
         "openAiApi": {
-          "id": "ft9ZQPEC4h3cWRpc",
-          "name": "OpenAi account"
+          "id": "9RvLAmbSLGf0aESJ",
+          "name": "n8n free OpenAI API credits"
         }
       }
     },
     {
       "parameters": {
-        "jsCode": "// Извлекаем текст поста из ответа LLM\nconst input = $input.first().json;\nconst originalData = $('Готовим промпт').first().json;\n\nlet postText = '';\n\n// Разные форматы ответа OpenAI\nif (input.message && input.message.content) {\n  postText = input.message.content;\n} else if (input.text) {\n  postText = input.text;\n} else if (input.content) {\n  postText = input.content;\n} else if (typeof input === 'string') {\n  postText = input;\n}\n\n// Очищаем от возможных markdown блоков\npostText = postText\n  .replace(/```[\\s\\S]*?```/g, '')\n  .replace(/^```\\w*\\n?/gm, '')\n  .replace(/```$/gm, '')\n  .trim();\n\n// Проверяем длину\nconst maxLength = originalData.maxLength || 800;\nif (postText.length > maxLength + 100) {\n  console.log(`Пост слишком длинный (${postText.length}), обрезаем`);\n  postText = postText.substring(0, maxLength) + '...';\n}\n\nconsole.log(`Пост готов, длина: ${postText.length} символов`);\n\nreturn [{\n  json: {\n    post_text: postText,\n    media_url: originalData.mediaUrl || '',\n    content_hash: originalData.content_hash,\n    title: originalData.title,\n    link: originalData.link,\n    source_id: originalData.source_id,\n    source_name: originalData.source_name,\n    settings: originalData.settings\n  }\n}];"
+        "jsCode": "// Извлекаем текст поста из ответа LLM\nconst input = $input.first().json;\nconst originalData = $('Готовим промпт').first().json;\n\nlet postText = '';\n\nif (input.message && input.message.content) {\n  postText = input.message.content;\n} else if (input.text) {\n  postText = input.text;\n} else if (input.content) {\n  postText = input.content;\n} else if (typeof input === 'string') {\n  postText = input;\n}\n\npostText = postText\n  .replace(/```[\\s\\S]*?```/g, '')\n  .replace(/^```\\w*\\n?/gm, '')\n  .replace(/```$/gm, '')\n  .trim();\n\nconst maxLength = originalData.maxLength || 700;\nif (postText.length > maxLength + 100) {\n  postText = postText.substring(0, maxLength) + '...';\n}\n\nconsole.log(`Пост готов: ${postText.length} символов, фото: ${originalData.mediaUrl ? 'да' : 'нет'}`);\n\nreturn [{\n  json: {\n    post_text: postText,\n    media_url: originalData.mediaUrl || '',\n    content_hash: originalData.content_hash,\n    title: originalData.title,\n    link: originalData.link,\n    source_id: originalData.source_id,\n    source_name: originalData.source_name,\n    settings: originalData.settings\n  }\n}];"
       },
-      "id": "extract-post",
+      "id": "2e27915b-0758-4d32-806a-069aa3ae1b3c",
       "name": "Извлекаем пост",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        3140,
-        -100
+        1312,
+        416
       ]
     },
     {
@@ -515,13 +515,13 @@
         },
         "options": {}
       },
-      "id": "check-media",
+      "id": "d87a4e61-fefc-4250-9507-28d3005de49c",
       "name": "Есть медиа?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        3360,
-        -100
+        1536,
+        416
       ]
     },
     {
@@ -531,60 +531,65 @@
         "file": "={{ $json.media_url }}",
         "additionalFields": {
           "caption": "={{ $json.post_text }}",
+          "disable_notification": true,
           "parse_mode": "HTML"
         }
       },
-      "id": "tg-with-photo",
+      "id": "ddf51d18-ddcb-43f3-a602-d9022c7cb3b9",
       "name": "TG: с фото",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        3580,
-        -200
+        1760,
+        320
       ],
+      "webhookId": "283421dc-a30e-4540-b399-94fae97257f8",
       "credentials": {
         "telegramApi": {
-          "id": "y6LOi4D9Lh9X3XHL",
-          "name": "Telegram account"
+          "id": "nEb4sqlJA4mryxwN",
+          "name": "Fiesta Redaktor"
         }
       },
-      "onError": "continueRegularOutput",
-      "continueOnFail": true
+      "continueOnFail": true,
+      "onError": "continueRegularOutput"
     },
     {
       "parameters": {
         "chatId": "={{ $json.settings.telegram_channel || '@kontentzavodn8npro' }}",
         "text": "={{ $json.post_text }}",
         "additionalFields": {
+          "appendAttribution": false,
+          "disable_notification": true,
           "parse_mode": "HTML"
         }
       },
-      "id": "tg-text-only",
+      "id": "32b8868f-2b54-4c3e-9377-943770a46c98",
       "name": "TG: только текст",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        3580,
-        0
+        1760,
+        528
       ],
+      "webhookId": "a3b81408-56e2-4a08-94c0-b1542b079ce9",
       "credentials": {
         "telegramApi": {
-          "id": "y6LOi4D9Lh9X3XHL",
-          "name": "Telegram account"
+          "id": "nEb4sqlJA4mryxwN",
+          "name": "Fiesta Redaktor"
         }
       }
     },
     {
       "parameters": {
-        "jsCode": "// Fallback если фото не загрузилось - отправляем текст\nconst input = $input.first().json;\nconst originalData = $('Извлекаем пост').first().json;\n\n// Если была ошибка с фото, возвращаем данные для отправки текстом\nif (input.error || input.ok === false) {\n  console.log('Ошибка отправки фото, отправим только текст');\n  return [{ json: originalData }];\n}\n\n// Успешно отправлено с фото\nreturn [{ json: { ...originalData, sent_with_photo: true } }];"
+        "jsCode": "// Fallback если фото не загрузилось\nconst input = $input.first().json;\nconst originalData = $('Извлекаем пост').first().json;\n\nif (input.error || input.ok === false) {\n  console.log('Ошибка отправки фото, отправим текстом');\n  return [{ json: originalData }];\n}\n\nreturn [{ json: { ...originalData, sent_with_photo: true } }];"
       },
-      "id": "photo-fallback",
+      "id": "f7d0e9e9-520e-47ba-9b22-41ba5768bbf7",
       "name": "Фото fallback",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        3800,
-        -200
+        1968,
+        320
       ]
     },
     {
@@ -611,13 +616,13 @@
         },
         "options": {}
       },
-      "id": "check-photo-sent",
+      "id": "48d8e214-ccd6-47bb-862a-926aa7b81943",
       "name": "Фото отправлено?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        4020,
-        -200
+        2192,
+        320
       ]
     },
     {
@@ -625,44 +630,33 @@
         "chatId": "={{ $json.settings.telegram_channel || '@kontentzavodn8npro' }}",
         "text": "={{ $json.post_text }}",
         "additionalFields": {
+          "appendAttribution": false,
+          "disable_notification": true,
           "parse_mode": "HTML"
         }
       },
-      "id": "tg-text-fallback",
+      "id": "ee094bd8-ce3a-4635-bf3e-8219f275dede",
       "name": "TG: текст (fallback)",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        4240,
-        -300
+        2416,
+        224
       ],
+      "webhookId": "b6690450-5308-427b-bc29-4294ec10576f",
       "credentials": {
         "telegramApi": {
-          "id": "y6LOi4D9Lh9X3XHL",
-          "name": "Telegram account"
+          "id": "nEb4sqlJA4mryxwN",
+          "name": "Fiesta Redaktor"
         }
       }
-    },
-    {
-      "parameters": {
-        "mode": "chooseBranch",
-        "output": "empty"
-      },
-      "id": "after-telegram",
-      "name": "После Telegram",
-      "type": "n8n-nodes-base.merge",
-      "typeVersion": 3,
-      "position": [
-        4460,
-        -100
-      ]
     },
     {
       "parameters": {
         "operation": "append",
         "documentId": {
           "__rl": true,
-          "value": "ВАШ_GOOGLE_SHEET_ID",
+          "value": "1tXEeXD_GGwOt5NViRpwzKBrpfASmfu1AlIlAjdlXWaQ",
           "mode": "id"
         },
         "sheetName": {
@@ -681,21 +675,98 @@
             "published_at": "={{ $now.format('yyyy-MM-dd HH:mm') }}",
             "post_text": "={{ $('Извлекаем пост').first().json.post_text.substring(0, 500) }}",
             "media_url": "={{ $('Извлекаем пост').first().json.media_url }}"
-          }
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "content_hash",
+              "displayName": "content_hash",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "title",
+              "displayName": "title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "original_url",
+              "displayName": "original_url",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "source_id",
+              "displayName": "source_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "source_name",
+              "displayName": "source_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "published_at",
+              "displayName": "published_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "post_text",
+              "displayName": "post_text",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "media_url",
+              "displayName": "media_url",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
         },
         "options": {}
       },
-      "id": "log-to-sheets",
+      "id": "ecd8b654-716d-4849-8f12-70697a59e5f4",
       "name": "Логируем в Sheets",
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.5,
       "position": [
-        4680,
-        -100
+        2848,
+        416
       ],
       "credentials": {
         "googleSheetsOAuth2Api": {
-          "id": "uGOwd5vPd6Kpt3a9",
+          "id": "ZGMFZBzwb8Zx9k6C",
           "name": "Google Sheets account"
         }
       }
@@ -703,19 +774,20 @@
     {
       "parameters": {
         "respondWith": "text",
-        "responseBody": "=✅ Пост опубликован!\n\nЗаголовок: {{ $('Извлекаем пост').first().json.title.substring(0, 100) }}\nИсточник: {{ $('Извлекаем пост').first().json.source_name }}",
+        "responseBody": "=Пост опубликован!\n\nЗаголовок: {{ $('Извлекаем пост').first().json.title.substring(0, 100) }}\nИсточник: {{ $('Извлекаем пост').first().json.source_name }}",
         "options": {}
       },
-      "id": "webhook-response",
+      "id": "395c69c3-afc5-4815-804c-460436221ac1",
       "name": "Webhook Response",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
       "position": [
-        4900,
-        -100
+        3072,
+        416
       ]
     }
   ],
+  "pinData": {},
   "connections": {
     "Schedule (11, 14, 18)": {
       "main": [
@@ -858,7 +930,7 @@
           {
             "node": "Объединяем новости",
             "type": "main",
-            "index": 2
+            "index": 1
           }
         ]
       ]
@@ -1020,7 +1092,7 @@
         ],
         [
           {
-            "node": "После Telegram",
+            "node": "Логируем в Sheets",
             "type": "main",
             "index": 0
           }
@@ -1031,7 +1103,7 @@
       "main": [
         [
           {
-            "node": "После Telegram",
+            "node": "Логируем в Sheets",
             "type": "main",
             "index": 0
           }
@@ -1039,17 +1111,6 @@
       ]
     },
     "TG: только текст": {
-      "main": [
-        [
-          {
-            "node": "После Telegram",
-            "type": "main",
-            "index": 1
-          }
-        ]
-      ]
-    },
-    "После Telegram": {
       "main": [
         [
           {
@@ -1076,11 +1137,10 @@
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "2.2.0-anti-duplicates",
+  "versionId": "3.0.0-fixed",
   "meta": {
-    "templateCredsSetupCompleted": true,
-    "instanceId": "f8f72cabe4df8ac721f550b9c15d7a93c0b520d28aa5540a9d6354bdc91ec5d3"
+    "instanceId": "d13f571aa18c7fbfa72612b93cce51712068d674a32e481939ed327a71628440"
   },
-  "id": "DkUmTtnd63z2OAP0XCrge",
+  "id": "79zrY9O6U4zCZ2Rm",
   "tags": []
 }
